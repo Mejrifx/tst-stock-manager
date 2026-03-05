@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,19 +22,28 @@ export default function Login() {
     setError('');
 
     try {
+      console.log('Attempting login...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
 
       if (data.user) {
+        console.log('Login successful, user:', data.user.email);
         toast.success('Welcome back!');
-        // Navigation will happen automatically via AuthProvider
+        
+        // Force navigation to dashboard
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 100);
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login failed:', error);
       setError(error.message || 'Invalid email or password');
       toast.error('Login failed');
     } finally {

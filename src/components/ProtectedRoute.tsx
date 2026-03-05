@@ -1,9 +1,12 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { Loader2 } from 'lucide-react';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
+  console.log('ProtectedRoute - loading:', loading, 'user:', user?.email);
 
   if (loading) {
     return (
@@ -17,8 +20,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    console.log('No user, redirecting to login');
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  console.log('User authenticated, rendering children');
   return <>{children}</>;
 }
