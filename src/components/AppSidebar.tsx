@@ -8,6 +8,8 @@ import {
   Box,
   LogOut,
   User as UserIcon,
+  FileText,
+  Zap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
