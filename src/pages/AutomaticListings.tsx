@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, AlertCircle, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CreateListing } from "@/components/CreateListing";
 
 export default function AutomaticListings() {
   const { skus } = useStore();
@@ -38,6 +39,8 @@ export default function AutomaticListings() {
           Listings created via admin panel (full automation)
         </p>
       </div>
+
+      <CreateListing />
 
       <Alert className="bg-green-500/10 border-green-500/30">
         <Zap className="h-4 w-4 text-green-600" />

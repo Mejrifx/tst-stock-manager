@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BulkImport } from "@/components/BulkImport";
 
 export default function ManualListings() {
   const { skus } = useStore();
@@ -34,6 +35,8 @@ export default function ManualListings() {
           Traditional eBay listings (imported for tracking)
         </p>
       </div>
+
+      <BulkImport />
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
