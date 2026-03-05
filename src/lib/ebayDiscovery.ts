@@ -1,5 +1,5 @@
 import { useStore } from '@/store/useStore';
-import { getAllActiveListings } from './ebay/inventory';
+import { getAllActiveListings, updateInventoryQuantity } from './ebay/inventory';
 import { getInventoryItem } from './ebay/inventory';
 import * as api from './supabase-api';
 
@@ -7,9 +7,10 @@ import * as api from './supabase-api';
  * Discovers eBay listings and automatically links them to SKUs in the database
  * If a SKU doesn't exist, it creates a new one automatically
  */
-export async function discoverAndLinkEbayListings(): Promise<{
+export async function discoverAndLinkEbayListings(autoReplenish: boolean = true): Promise<{
   linked: number;
   created: number;
+  replenished: number;
   unmatched: number;
   errors: string[];
 }> {
@@ -17,6 +18,7 @@ export async function discoverAndLinkEbayListings(): Promise<{
   const results = {
     linked: 0,
     created: 0,
+    replenished: 0,
     unmatched: 0,
     errors: [] as string[],
   };
@@ -105,8 +107,14 @@ export async function discoverAndLinkEbayListings(): Promise<{
     // Reload data to show new/updated SKUs
     await store.loadData();
 
+    // AUTO-REPLENISH: Set all listings below cap to 3 units
+    if (autoReplenish) {
+      console.log('🔄 Auto-replenishing listings below cap...');
+      results.replenished = await autoReplenishAllListings();
+    }
+
     // Log summary
-    const summary = `eBay discovery: ${results.linked} linked, ${results.created} created, ${results.unmatched} unmatched, ${results.errors.length} errors`;
+    const summary = `eBay discovery: ${results.linked} linked, ${results.created} created, ${results.replenished} replenished, ${results.unmatched} unmatched, ${results.errors.length} errors`;
     console.log(summary);
     
     if (results.linked > 0 || results.created > 0) {
@@ -126,6 +134,62 @@ export async function discoverAndLinkEbayListings(): Promise<{
 }
 
 /**
+ * Auto-replenish all listings that are below their cap quantity
+ */
+export async function autoReplenishAllListings(): Promise<number> {
+  const store = useStore.getState();
+  let replenishedCount = 0;
+
+  // Reload to get latest data
+  await store.loadData();
+
+  const skusToReplenish = store.skus.filter(
+    (sku) => 
+      sku.ebay_listing_id && 
+      sku.ebay_listed_quantity < sku.cap_quantity &&
+      sku.available_stock > 0
+  );
+
+  console.log(`Found ${skusToReplenish.length} SKUs below cap`);
+
+  for (const sku of skusToReplenish) {
+    try {
+      const targetQuantity = sku.cap_quantity; // Always set to 3
+      
+      console.log(`Replenishing ${sku.sku}: ${sku.ebay_listed_quantity} → ${targetQuantity}`);
+
+      // Update on eBay
+      const success = await updateInventoryQuantity(sku.sku, targetQuantity);
+      
+      if (success) {
+        // Update in database
+        await api.updateSKU(sku.id, {
+          ebay_listed_quantity: targetQuantity,
+          last_synced_at: new Date().toISOString(),
+        });
+
+        await store.addActivity(
+          'QUANTITY_REPLENISHED',
+          `Auto-replenished ${sku.sku} from ${sku.ebay_listed_quantity} to ${targetQuantity} units`
+        );
+
+        replenishedCount++;
+        console.log(`✅ Replenished ${sku.sku}`);
+      } else {
+        console.error(`❌ Failed to replenish ${sku.sku} on eBay`);
+      }
+    } catch (error: any) {
+      console.error(`Error replenishing ${sku.sku}:`, error);
+    }
+  }
+
+  // Final reload to show updated quantities
+  await store.loadData();
+
+  return replenishedCount;
+}
+
+/**
  * Updates a local SKU with eBay listing information
  * Called from Zustand store
  */
@@ -142,4 +206,3 @@ export async function updateSKUWithEbayInfo(
     last_synced_at: new Date().toISOString(),
   });
 }
-

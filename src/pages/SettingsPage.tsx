@@ -42,10 +42,15 @@ export default function SettingsPage() {
 
   const handleDisconnect = () => {
     localStorage.removeItem('ebay_refresh_token');
+    localStorage.removeItem('ebay_access_token');
+    localStorage.removeItem('ebay_token_expiry');
     setIsConnected(false);
     syncWorker.stop();
     setIsSyncActive(false);
     toast.success('Disconnected from eBay');
+    
+    // Force reload to clear any cached state
+    setTimeout(() => window.location.reload(), 500);
   };
 
   const handleToggleSync = (enabled: boolean) => {
@@ -89,16 +94,25 @@ export default function SettingsPage() {
     toast.info('Discovering eBay listings...');
     
     try {
-      const results = await discoverAndLinkEbayListings();
+      // Auto-replenish is enabled by default
+      const results = await discoverAndLinkEbayListings(true);
       
       if (results.errors.length > 0) {
         toast.error(`Discovery completed with ${results.errors.length} errors. Check console for details.`);
       } else if (results.linked === 0 && results.created === 0 && results.unmatched === 0) {
         toast.warning('No eBay listings found');
       } else {
-        const message = results.created > 0 
-          ? `Discovered ${results.linked} listings and created ${results.created} new SKUs!`
-          : `Discovered ${results.linked} listings!`;
+        let message = '';
+        if (results.created > 0) {
+          message = `Discovered ${results.linked} listings, created ${results.created} new SKUs`;
+        } else {
+          message = `Discovered ${results.linked} listings`;
+        }
+        
+        if (results.replenished > 0) {
+          message += `, and replenished ${results.replenished} to 3 units!`;
+        }
+        
         toast.success(message);
         
         // Reload data to show updated listings
@@ -193,7 +207,7 @@ export default function SettingsPage() {
           
           {isConnected && (
             <div className="p-3 bg-info/10 border border-info/30 rounded text-xs text-info">
-              <strong>💡 How it works:</strong> Create listings on eBay with SKU codes. Click "Discover Listings" to automatically create/link SKUs in your inventory.
+              <strong>💡 How it works:</strong> Create listings on eBay with SKU codes. Click "Discover Listings" to automatically create/link SKUs in your inventory. <strong>All listings below 3 units will be automatically replenished to 3!</strong>
             </div>
           )}
         </CardContent>
