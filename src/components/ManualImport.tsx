@@ -109,8 +109,9 @@ export function ManualImport() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Why manual import?</strong> Your eBay listings were created via the traditional flow (not Inventory API). 
-            This tool lets you quickly add them to the system so auto-sync can work.
+            <strong>⚠️ Important:</strong> Listings imported here were created via traditional eBay flow. 
+            The system can track them and detect sales, but <strong>cannot auto-update quantities on eBay</strong>. 
+            You'll need to manually adjust eBay quantities when needed, or recreate listings via "Create eBay Listing" for full automation.
           </AlertDescription>
         </Alert>
 
