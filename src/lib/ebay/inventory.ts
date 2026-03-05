@@ -51,13 +51,16 @@ export async function getAllInventoryItems(limit: number = 100, offset: number =
       offset: offset.toString(),
     });
 
+    console.log('Fetching inventory items from eBay...');
     const response = await ebayClient.get<InventoryItemResponse>(
       `/sell/inventory/v1/inventory_item?${params}`
     );
 
+    console.log('eBay inventory response:', response);
     return response.inventoryItems || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch inventory items:', error);
+    console.error('Error details:', error.response?.data || error.message);
     return [];
   }
 }
@@ -69,10 +72,28 @@ export async function getAllActiveListings(): Promise<Map<string, { listingId: s
   const listings = new Map<string, { listingId: string; quantity: number }>();
   
   try {
+    console.log('📋 Fetching inventory items from eBay Inventory API...');
+    
     // Fetch all inventory items which include listing IDs
     const items = await getAllInventoryItems();
     
+    console.log(`✅ Found ${items.length} inventory items`);
+    
+    if (items.length === 0) {
+      console.warn('⚠️ No inventory items found. This could mean:');
+      console.warn('   1. Your eBay listings were created via traditional listing flow (not Inventory API)');
+      console.warn('   2. Listings don\'t have SKUs set');
+      console.warn('   3. You need to migrate listings to Inventory API');
+      console.warn('   4. Check if you\'re looking at the right eBay account');
+    }
+    
     for (const item of items) {
+      console.log(`Processing item: ${item.sku}`, {
+        hasListingIds: !!item.listingIds,
+        listingCount: item.listingIds?.length || 0,
+        quantity: item.availability?.shipToLocationAvailability?.quantity
+      });
+      
       if (item.listingIds && item.listingIds.length > 0) {
         // Get the first (primary) listing ID
         const listingId = item.listingIds[0];
@@ -82,13 +103,18 @@ export async function getAllActiveListings(): Promise<Map<string, { listingId: s
           listingId,
           quantity,
         });
+        
+        console.log(`✅ Linked: ${item.sku} → Listing ${listingId} (${quantity} units)`);
+      } else {
+        console.warn(`⚠️ Item ${item.sku} has no listing IDs - may not be published`);
       }
     }
     
-    console.log(`Found ${listings.size} active listings on eBay`);
+    console.log(`📊 Summary: Found ${listings.size} active listings on eBay`);
     return listings;
-  } catch (error) {
-    console.error('Failed to fetch active listings:', error);
+  } catch (error: any) {
+    console.error('❌ Failed to fetch active listings:', error);
+    console.error('Error details:', error.response?.data || error.message);
     return listings;
   }
 }
