@@ -268,8 +268,16 @@ export async function createInventoryItemWithOffer(
     
     return listingId;
   } catch (error: any) {
-    console.error('Failed to create listing:', error);
-    console.error('Error details:', error.response?.data || error.message);
-    throw new Error(`Failed to create listing: ${error.response?.data?.errors?.[0]?.message || error.message}`);
+    console.error('❌ Failed to create listing:', error);
+    console.error('Full error response:', JSON.stringify(error.response?.data, null, 2));
+    
+    const ebayError = error.response?.data?.errors?.[0];
+    const errorMsg = ebayError?.message || error.message;
+    const errorDetails = ebayError?.longMessage || ebayError?.parameters || '';
+    
+    console.error('eBay error:', errorMsg);
+    if (errorDetails) console.error('eBay details:', JSON.stringify(errorDetails, null, 2));
+    
+    throw new Error(`Failed to create listing: ${errorMsg}`);
   }
 }

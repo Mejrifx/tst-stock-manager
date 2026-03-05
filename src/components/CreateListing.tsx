@@ -45,19 +45,10 @@ export function CreateListing() {
 
       console.log('Creating eBay listing:', { sku, title, price: priceNum, quantity: qtyNum });
 
-      // Check for business policies
-      const paymentPolicyId = 'YOUR_PAYMENT_POLICY_ID';
-      const returnPolicyId = 'YOUR_RETURN_POLICY_ID';
-      const fulfillmentPolicyId = 'YOUR_FULFILLMENT_POLICY_ID';
-
-      if (paymentPolicyId === 'YOUR_PAYMENT_POLICY_ID' || 
-          returnPolicyId === 'YOUR_RETURN_POLICY_ID' || 
-          fulfillmentPolicyId === 'YOUR_FULFILLMENT_POLICY_ID') {
-        toast.error('⚠️ Business Policies Not Configured!');
-        console.error('❌ You need to set up Business Policies first. See BUSINESS_POLICIES_SETUP.md');
-        console.error('   Edit src/components/CreateListing.tsx lines 55-57 with your policy IDs from eBay Seller Hub');
-        return;
-      }
+      // Your eBay Business Policy IDs
+      const paymentPolicyId = '208929822021';
+      const returnPolicyId = '275313703021';
+      const fulfillmentPolicyId = '295926498021';
 
       // Create inventory item + offer on eBay
       const listingId = await createInventoryItemWithOffer(
@@ -139,8 +130,18 @@ export function CreateListing() {
       setPrice('');
       setQuantity('3');
     } catch (error: any) {
-      console.error('Failed to create listing:', error);
-      toast.error(`Failed to create listing: ${error.message}`);
+      console.error('❌ Failed to create listing:', error);
+      console.error('Full error object:', error.response?.data || error);
+      
+      // Extract eBay's actual error message
+      const ebayError = error.response?.data?.errors?.[0];
+      const errorMsg = ebayError?.message || error.message || 'Unknown error';
+      const errorDetails = ebayError?.longMessage || '';
+      
+      console.error('eBay error message:', errorMsg);
+      if (errorDetails) console.error('eBay error details:', errorDetails);
+      
+      toast.error(`Failed to create listing: ${errorMsg}`);
     } finally {
       setCreating(false);
     }
@@ -166,11 +167,10 @@ export function CreateListing() {
           </AlertDescription>
         </Alert>
 
-        <Alert className="mb-4 bg-yellow-500/10 border-yellow-500/30">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-yellow-600">
-            <strong>Setup Required:</strong> You need to create Business Policies (Payment, Return, Fulfillment) 
-            in eBay Seller Hub first. We'll guide you through this.
+        <Alert className="mb-4 bg-green-500/10 border-green-500/30">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-600">
+            <strong>✅ Ready to go!</strong> Business policies configured. This will work automatically with full automation enabled.
           </AlertDescription>
         </Alert>
 
