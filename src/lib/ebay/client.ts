@@ -48,17 +48,8 @@ class EbayClient {
 
     try {
       const response = await axios.post<TokenResponse>(
-        `${getEbayApiBase(this.config.environment)}/identity/v1/oauth2/token`,
-        new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
-          },
-        }
+        '/.netlify/functions/ebay-oauth-refresh',
+        { refreshToken }
       );
 
       this.accessToken = response.data.access_token;
@@ -116,17 +107,10 @@ class EbayClient {
 
   async exchangeCodeForToken(code: string): Promise<string> {
     const response = await axios.post<TokenResponse & { refresh_token: string }>(
-      `${getEbayApiBase(this.config.environment)}/identity/v1/oauth2/token`,
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: this.config.redirectUri,
-      }),
+      '/.netlify/functions/ebay-oauth-exchange',
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${btoa(`${this.config.clientId}:${this.config.clientSecret}`)}`,
-        },
+        code,
+        redirectUri: this.config.redirectUri,
       }
     );
 
