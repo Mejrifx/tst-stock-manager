@@ -59,7 +59,7 @@ export function AppSidebar() {
           <Box className="h-6 w-6 text-sidebar-primary shrink-0" />
           {!collapsed && (
             <span className="font-semibold text-sidebar-accent-foreground tracking-tight">
-              eBay Manager
+              TST Stock Manager
             </span>
           )}
         </div>
