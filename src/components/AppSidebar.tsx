@@ -6,9 +6,13 @@ import {
   Activity,
   Settings,
   Box,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -19,8 +23,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -35,6 +41,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success('Signed out successfully');
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -74,6 +86,27 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border p-4">
+        {!collapsed && (
+          <div className="mb-2 px-2">
+            <div className="flex items-center gap-2 text-sm">
+              <UserIcon className="h-4 w-4 text-sidebar-foreground/50 shrink-0" />
+              <span className="text-xs text-sidebar-foreground/70 truncate">
+                {user?.email}
+              </span>
+            </div>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Sign Out</span>}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
