@@ -86,6 +86,7 @@ export function CreateListing() {
               currency: 'USD',
             },
           },
+          merchantLocationKey: 'DEFAULT', // Use default merchant location
         }
       );
 

@@ -9,6 +9,8 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
+import ManualListings from "./pages/ManualListings";
+import AutomaticListings from "./pages/AutomaticListings";
 import Caps from "./pages/Caps";
 import Sales from "./pages/Sales";
 import ActivityPage from "./pages/ActivityPage";
