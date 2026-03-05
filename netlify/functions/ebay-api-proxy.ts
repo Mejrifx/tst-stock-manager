@@ -34,6 +34,7 @@ const handler: Handler = async (event: HandlerEvent) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Content-Language': 'en-US',
       },
       data: body,
     });
