@@ -9,17 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ebayClient } from "@/lib/ebay/client";
 import { syncWorker } from "@/lib/syncWorker";
+import { discoverAndLinkEbayListings } from "@/lib/ebayDiscovery";
 import { useStore } from "@/store/useStore";
 import { toast } from "sonner";
-import { RefreshCw, LogOut, LogIn } from "lucide-react";
+import { RefreshCw, LogOut, LogIn, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { syncStatus } = useStore();
+  const { syncStatus, loadData } = useStore();
   const [isConnected, setIsConnected] = useState(false);
   const [syncInterval, setSyncInterval] = useState(5);
   const [isSyncActive, setIsSyncActive] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false);
 
   useEffect(() => {
     setIsConnected(ebayClient.isConnected());
@@ -74,6 +76,35 @@ export default function SettingsPage() {
     }
     toast.info('Starting manual sync...');
     await syncWorker.runSync();
+  };
+
+  const handleDiscoverListings = async () => {
+    if (!isConnected) {
+      toast.error('Please connect to eBay first');
+      return;
+    }
+    
+    setIsDiscovering(true);
+    toast.info('Discovering eBay listings...');
+    
+    try {
+      const results = await discoverAndLinkEbayListings();
+      
+      if (results.errors.length > 0) {
+        toast.error(`Discovery completed with ${results.errors.length} errors. Check console for details.`);
+      } else if (results.linked === 0 && results.unmatched === 0) {
+        toast.warning('No eBay listings found');
+      } else {
+        toast.success(`Discovered ${results.linked} listings! ${results.unmatched} unmatched SKUs.`);
+        
+        // Reload data to show updated listings
+        await loadData();
+      }
+    } catch (error: any) {
+      toast.error(`Discovery failed: ${error.message}`);
+    } finally {
+      setIsDiscovering(false);
+    }
   };
 
   return (
@@ -134,6 +165,18 @@ export default function SettingsPage() {
               <Button onClick={handleConnect} className="gap-2" disabled={!ebayClient.isConfigured()}>
                 <LogIn className="h-4 w-4" />
                 Connect to eBay
+              </Button>
+            )}
+            
+            {isConnected && (
+              <Button 
+                onClick={handleDiscoverListings} 
+                disabled={isDiscovering}
+                className="gap-2"
+                variant="secondary"
+              >
+                <Search className={`h-4 w-4 ${isDiscovering ? 'animate-spin' : ''}`} />
+                {isDiscovering ? 'Discovering...' : 'Discover Listings'}
               </Button>
             )}
           </div>

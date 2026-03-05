@@ -15,6 +15,7 @@ interface Store {
   // SKU Actions
   addStock: (skuId: string, quantity: number) => Promise<void>;
   removeStock: (skuId: string, quantity: number, reason: string) => Promise<void>;
+  updateSKU: (skuId: string, updates: Partial<SKU>) => Promise<void>;
   updateEbayQuantity: (skuId: string, newQty: number) => Promise<void>;
   processSale: (orderId: string, skuId: string, qty: number, buyer: string) => Promise<void>;
   replenishEbayListing: (skuId: string) => Promise<void>;
@@ -82,6 +83,19 @@ export const useStore = create<Store>((set, get) => ({
       );
     } catch (error) {
       console.error('Failed to remove stock:', error);
+      throw error;
+    }
+  },
+
+  updateSKU: async (skuId, updates) => {
+    try {
+      const updatedSKU = await api.updateSKU(skuId, updates);
+      
+      set((s) => ({
+        skus: s.skus.map((sku) => (sku.id === skuId ? updatedSKU : sku)),
+      }));
+    } catch (error) {
+      console.error('Failed to update SKU:', error);
       throw error;
     }
   },
