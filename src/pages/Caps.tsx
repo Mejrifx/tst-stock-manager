@@ -13,8 +13,8 @@ export default function Caps() {
     toast.success(`Replenished eBay listing for ${skuCode}`);
   };
 
-  const listedSkus = skus.filter((s) => s.ebayListingId);
-  const unlistedSkus = skus.filter((s) => !s.ebayListingId);
+  const listedSkus = skus.filter((s) => s.ebay_listing_id);
+  const unlistedSkus = skus.filter((s) => !s.ebay_listing_id);
 
   return (
     <div className="space-y-6">
@@ -29,9 +29,9 @@ export default function Caps() {
         <h2 className="text-lg font-medium">Active Listings ({listedSkus.length})</h2>
         
         {listedSkus.map((sku) => {
-          const needed = Math.max(0, sku.capQuantity - sku.ebayListedQuantity);
-          const canList = Math.min(needed, sku.availableStock);
-          const isAtCap = sku.ebayListedQuantity >= sku.capQuantity;
+          const needed = Math.max(0, sku.cap_quantity - sku.ebay_listed_quantity);
+          const canList = Math.min(needed, sku.available_stock);
+          const isAtCap = sku.ebay_listed_quantity >= sku.cap_quantity;
 
           return (
             <Card key={sku.id}>
@@ -41,9 +41,9 @@ export default function Caps() {
                     <CardTitle className="text-sm font-medium">{sku.title}</CardTitle>
                     <p className="text-xs text-muted-foreground font-mono mt-1">{sku.sku}</p>
                   </div>
-                  {sku.ebayListingId && (
+                  {sku.ebay_listing_id && (
                     <Button variant="ghost" size="sm" className="h-7 gap-1" asChild>
-                      <a href={`https://www.ebay.co.uk/itm/${sku.ebayListingId}`} target="_blank" rel="noopener noreferrer">
+                      <a href={`https://www.ebay.co.uk/itm/${sku.ebay_listing_id}`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3 w-3" />
                         View
                       </a>
@@ -55,19 +55,19 @@ export default function Caps() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex gap-3 flex-wrap text-sm">
                     <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                      {sku.totalStock} total stock
+                      {sku.total_stock} total stock
                     </Badge>
                     <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                      {sku.availableStock} available
+                      {sku.available_stock} available
                     </Badge>
                     <Badge variant="outline" className="bg-info/10 text-info border-info/30">
-                      {sku.ebayListedQuantity} listed
+                      {sku.ebay_listed_quantity} listed
                     </Badge>
                   </div>
 
                   <div className="flex items-center gap-2 sm:ml-auto">
                     <span className="text-sm text-muted-foreground">Cap:</span>
-                    <span className="text-lg font-semibold font-mono">{sku.capQuantity}</span>
+                    <span className="text-lg font-semibold font-mono">{sku.cap_quantity}</span>
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export default function Caps() {
                   </div>
                 </div>
 
-                {sku.availableStock === 0 && !isAtCap && (
+                {sku.available_stock === 0 && !isAtCap && (
                   <div className="mt-3 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
                     <strong>Warning:</strong> No stock available to replenish this listing
                   </div>
@@ -127,7 +127,7 @@ export default function Caps() {
                       <p className="text-xs text-muted-foreground font-mono">{sku.sku}</p>
                     </div>
                     <Badge variant="outline" className="bg-muted text-muted-foreground">
-                      {sku.totalStock} in stock
+                      {sku.total_stock} in stock
                     </Badge>
                   </div>
                 ))}
