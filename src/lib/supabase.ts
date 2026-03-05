@@ -1,11 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
+
+// Ensure URL has protocol
+if (!supabaseUrl.startsWith('http://') && !supabaseUrl.startsWith('https://')) {
+  console.warn('⚠️ VITE_SUPABASE_URL missing protocol, adding https://');
+  supabaseUrl = `https://${supabaseUrl}`;
+}
+
+console.log('🔧 Supabase URL:', supabaseUrl);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
