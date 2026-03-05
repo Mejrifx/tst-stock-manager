@@ -20,7 +20,7 @@ export default function Inventory() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [selectedSkuId, setSelectedSkuId] = useState<string>("");
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number>(0);
   const [removeReason, setRemoveReason] = useState<string>("");
 
   const models = [...new Set(skus.map((s) => s.model))];
@@ -44,7 +44,9 @@ export default function Inventory() {
       addStock(selectedSkuId, quantity);
       toast.success(`Added ${quantity} units to stock`);
       setAddDialogOpen(false);
-      setQuantity(1);
+      setQuantity(0);
+    } else if (quantity <= 0) {
+      toast.error('Please enter a valid quantity');
     }
   };
 
@@ -53,8 +55,10 @@ export default function Inventory() {
       removeStock(selectedSkuId, quantity, removeReason || "Manual adjustment");
       toast.success(`Removed ${quantity} units from stock`);
       setRemoveDialogOpen(false);
-      setQuantity(1);
+      setQuantity(0);
       setRemoveReason("");
+    } else if (quantity <= 0) {
+      toast.error('Please enter a valid quantity');
     }
   };
 
@@ -199,10 +203,14 @@ export default function Inventory() {
               <Label htmlFor="add-quantity">Quantity</Label>
               <Input
                 id="add-quantity"
-                type="number"
-                min={1}
+                type="text"
+                inputMode="numeric"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^\d]/g, '');
+                  setQuantity(val === '' ? 0 : parseInt(val));
+                }}
+                placeholder="Enter quantity"
               />
             </div>
           </div>
@@ -226,10 +234,14 @@ export default function Inventory() {
               <Label htmlFor="remove-quantity">Quantity</Label>
               <Input
                 id="remove-quantity"
-                type="number"
-                min={1}
+                type="text"
+                inputMode="numeric"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^\d]/g, '');
+                  setQuantity(val === '' ? 0 : parseInt(val));
+                }}
+                placeholder="Enter quantity"
               />
             </div>
             <div className="space-y-2">
