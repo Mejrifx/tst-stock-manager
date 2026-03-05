@@ -133,14 +133,17 @@ export async function createActivity(
 }
 
 // Sync Status Operations
-export async function getSyncStatus(): Promise<SyncStatus> {
+export async function getSyncStatus(): Promise<SyncStatus | null> {
   const { data, error } = await supabase
     .from('sync_status')
     .select('*')
     .limit(1)
     .single();
   
-  if (error) throw error;
+  if (error) {
+    console.warn('No sync status found, will be created on first sync');
+    return null;
+  }
   return data;
 }
 

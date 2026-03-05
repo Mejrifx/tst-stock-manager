@@ -51,12 +51,12 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Sync Status
             </CardTitle>
-            <RefreshCw className={`h-4 w-4 text-primary ${syncStatus.status === "running" ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 text-primary ${syncStatus?.status === "running" ? "animate-spin" : ""}`} />
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold capitalize">{syncStatus?.status || 'idle'}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Last: {syncStatus ? formatDistanceToNow(new Date(syncStatus.last_run), { addSuffix: true }) : 'Never'}
+              Last: {syncStatus?.last_run ? formatDistanceToNow(new Date(syncStatus.last_run), { addSuffix: true }) : 'Never'}
             </p>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ export default function Dashboard() {
                 </div>
                 <span className="flex-1 text-foreground/80">{a.message}</span>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDistanceToNow(new Date(a.ts), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
                 </span>
               </div>
             ))}

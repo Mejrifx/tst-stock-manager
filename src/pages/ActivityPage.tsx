@@ -2,7 +2,9 @@ import { useStore } from "@/store/useStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
-import { ActivityType } from "@/data/mock";
+import type { Activity } from "@/lib/supabase";
+
+type ActivityType = Activity['type'];
 
 const activityConfig: Record<ActivityType, { className: string }> = {
   EBAY_SALE_DETECTED: { className: "bg-success/15 text-success border-success/30" },
@@ -54,8 +56,8 @@ export default function ActivityPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm">{a.message}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {format(new Date(a.ts), "dd MMM yyyy HH:mm")} ·{" "}
-                    {formatDistanceToNow(new Date(a.ts), { addSuffix: true })}
+                    {format(new Date(a.created_at), "dd MMM yyyy HH:mm")} ·{" "}
+                    {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
                   </p>
                 </div>
                 <span className="font-mono text-xs text-muted-foreground shrink-0">
