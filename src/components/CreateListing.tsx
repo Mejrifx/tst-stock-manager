@@ -45,6 +45,20 @@ export function CreateListing() {
 
       console.log('Creating eBay listing:', { sku, title, price: priceNum, quantity: qtyNum });
 
+      // Check for business policies
+      const paymentPolicyId = 'YOUR_PAYMENT_POLICY_ID';
+      const returnPolicyId = 'YOUR_RETURN_POLICY_ID';
+      const fulfillmentPolicyId = 'YOUR_FULFILLMENT_POLICY_ID';
+
+      if (paymentPolicyId === 'YOUR_PAYMENT_POLICY_ID' || 
+          returnPolicyId === 'YOUR_RETURN_POLICY_ID' || 
+          fulfillmentPolicyId === 'YOUR_FULFILLMENT_POLICY_ID') {
+        toast.error('⚠️ Business Policies Not Configured!');
+        console.error('❌ You need to set up Business Policies first. See BUSINESS_POLICIES_SETUP.md');
+        console.error('   Edit src/components/CreateListing.tsx lines 55-57 with your policy IDs from eBay Seller Hub');
+        return;
+      }
+
       // Create inventory item + offer on eBay
       const listingId = await createInventoryItemWithOffer(
         {
@@ -71,9 +85,9 @@ export function CreateListing() {
           availableQuantity: qtyNum,
           categoryId: category,
           listingPolicies: {
-            paymentPolicyId: 'YOUR_PAYMENT_POLICY_ID', // User needs to set this
-            returnPolicyId: 'YOUR_RETURN_POLICY_ID',   // User needs to set this
-            fulfillmentPolicyId: 'YOUR_FULFILLMENT_POLICY_ID', // User needs to set this
+            paymentPolicyId,
+            returnPolicyId,
+            fulfillmentPolicyId,
           },
           pricingSummary: {
             price: {
