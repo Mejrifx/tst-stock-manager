@@ -60,7 +60,7 @@ export function CreateListing() {
             aspects: {
               Brand: ['Apple'], // You can make this dynamic later
             },
-            imageUrls: [], // Add image support later
+            // Remove imageUrls - eBay requires at least one or omit entirely
           },
           condition,
           availability: {

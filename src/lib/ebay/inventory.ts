@@ -199,7 +199,7 @@ export interface CreateInventoryRequest {
     title: string;
     description?: string;
     aspects?: Record<string, string[]>;
-    imageUrls?: string[];
+    imageUrls?: string[]; // Optional - only include if you have images
   };
   condition: 'NEW' | 'LIKE_NEW' | 'NEW_OTHER' | 'NEW_WITH_DEFECTS' | 'MANUFACTURER_REFURBISHED' | 'SELLER_REFURBISHED' | 'USED_EXCELLENT' | 'USED_VERY_GOOD' | 'USED_GOOD' | 'USED_ACCEPTABLE' | 'FOR_PARTS_OR_NOT_WORKING';
   availability: {
