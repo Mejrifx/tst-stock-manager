@@ -15,8 +15,6 @@ import { toast } from "sonner";
 import { RefreshCw, LogOut, LogIn, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { TwoFactorAuth } from "@/components/TwoFactorAuth";
-import { BulkImport } from "@/components/BulkImport";
-import { CreateListing } from "@/components/CreateListing";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
