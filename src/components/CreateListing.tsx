@@ -254,15 +254,15 @@ export function CreateListing() {
                 onChange={(e) => setCondition(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="1000">NEW</option>
-                <option value="1500">NEW_OTHER</option>
-                <option value="1750">NEW_WITH_DEFECTS</option>
-                <option value="2000">MANUFACTURER_REFURBISHED</option>
-                <option value="2500">SELLER_REFURBISHED</option>
-                <option value="3000">USED_EXCELLENT</option>
-                <option value="4000">USED_VERY_GOOD</option>
-                <option value="5000">USED_GOOD</option>
-                <option value="6000">USED_ACCEPTABLE</option>
+                <option value="NEW">NEW</option>
+                <option value="NEW_OTHER">NEW_OTHER (Open Box)</option>
+                <option value="NEW_WITH_DEFECTS">NEW_WITH_DEFECTS</option>
+                <option value="MANUFACTURER_REFURBISHED">MANUFACTURER_REFURBISHED</option>
+                <option value="SELLER_REFURBISHED">SELLER_REFURBISHED</option>
+                <option value="USED_EXCELLENT">USED_EXCELLENT (Grade A+/A)</option>
+                <option value="USED_VERY_GOOD">USED_VERY_GOOD (Grade B+)</option>
+                <option value="USED_GOOD">USED_GOOD (Grade B/C)</option>
+                <option value="USED_ACCEPTABLE">USED_ACCEPTABLE (Grade D)</option>
               </select>
             </div>
 

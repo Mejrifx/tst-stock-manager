@@ -201,7 +201,7 @@ export interface CreateInventoryRequest {
     aspects?: Record<string, string[]>;
     imageUrls?: string[];
   };
-  condition: string;
+  condition: 'NEW' | 'LIKE_NEW' | 'NEW_OTHER' | 'NEW_WITH_DEFECTS' | 'MANUFACTURER_REFURBISHED' | 'SELLER_REFURBISHED' | 'USED_EXCELLENT' | 'USED_VERY_GOOD' | 'USED_GOOD' | 'USED_ACCEPTABLE' | 'FOR_PARTS_OR_NOT_WORKING';
   availability: {
     shipToLocationAvailability: {
       quantity: number;
@@ -237,6 +237,7 @@ export async function createInventoryItemWithOffer(
 ): Promise<string> {
   try {
     console.log('Creating inventory item:', inventoryItem.sku);
+    console.log('Inventory item payload:', JSON.stringify(inventoryItem, null, 2));
     
     // Step 1: Create or update inventory item
     await ebayClient.put(
@@ -248,6 +249,7 @@ export async function createInventoryItemWithOffer(
     
     // Step 2: Create offer (publish listing)
     console.log('Creating offer...');
+    console.log('Offer payload:', JSON.stringify(offer, null, 2));
     const offerResponse = await ebayClient.post<{ offerId: string; listingId: string }>(
       '/sell/inventory/v1/offer',
       offer
