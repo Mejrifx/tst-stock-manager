@@ -186,6 +186,12 @@ export default function SettingsPage() {
               <strong>Configuration Required:</strong> Please set VITE_EBAY_CLIENT_ID and VITE_EBAY_CLIENT_SECRET in .env.local
             </div>
           )}
+          
+          {isConnected && (
+            <div className="p-3 bg-info/10 border border-info/30 rounded text-xs text-info">
+              <strong>💡 How it works:</strong> Create listings on eBay with your SKU codes, then click "Discover Listings" to automatically link them to your inventory.
+            </div>
+          )}
         </CardContent>
       </Card>
 
