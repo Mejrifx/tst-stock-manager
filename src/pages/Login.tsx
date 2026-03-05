@@ -6,15 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showMFA, setShowMFA] = useState(false);
+  const [factorId, setFactorId] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,11 +36,24 @@ export default function Login() {
         throw error;
       }
 
+      // Check if MFA is required
       if (data.user) {
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+
+        if (verifiedFactor) {
+          console.log('MFA required');
+          setFactorId(verifiedFactor.id);
+          setShowMFA(true);
+          toast.info('Enter your 2FA code');
+          setLoading(false);
+          return;
+        }
+
+        // No MFA, redirect
         console.log('Login successful, user:', data.user.email);
         toast.success('Welcome back!');
         
-        // Force navigation to dashboard
         setTimeout(() => {
           navigate('/', { replace: true });
         }, 100);
@@ -46,6 +62,42 @@ export default function Login() {
       console.error('Login failed:', error);
       setError(error.message || 'Invalid email or password');
       toast.error('Login failed');
+    } finally {
+      if (!showMFA) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleMFAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mfaCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await supabase.auth.mfa.verify({
+        factorId,
+        challengeId: '', // Supabase handles this internally
+        code: mfaCode,
+      });
+
+      if (error) throw error;
+
+      console.log('MFA verified successfully');
+      toast.success('Welcome back!');
+      
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 100);
+    } catch (error: any) {
+      console.error('MFA verification failed:', error);
+      setError('Invalid code. Please try again.');
+      toast.error('Invalid 2FA code');
     } finally {
       setLoading(false);
     }
