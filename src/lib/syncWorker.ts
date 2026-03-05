@@ -116,13 +116,14 @@ export class SyncWorker {
         
         if (success) {
           store.updateEbayQuantity(sku.id, newQuantity);
-          console.log(`Successfully replenished ${sku.sku}`);
+          console.log(`✅ Successfully replenished ${sku.sku}`);
+          store.addActivity('REPLENISH', `Replenished ${sku.sku} to ${newQuantity} units`);
         } else {
-          console.error(`Failed to replenish ${sku.sku} on eBay`);
-          store.addActivity('ERROR', `Failed to replenish ${sku.sku} on eBay`);
+          console.warn(`⚠️ Could not replenish ${sku.sku} (traditional listing)`);
+          store.addActivity('WARNING', `Cannot auto-replenish ${sku.sku} (traditional listing - update manually on eBay)`);
         }
       } catch (error: any) {
-        console.error(`Error replenishing ${sku.sku}:`, error);
+        console.error(`❌ Error replenishing ${sku.sku}:`, error);
         store.addActivity('ERROR', `Error replenishing ${sku.sku}: ${error.message}`);
       }
     }

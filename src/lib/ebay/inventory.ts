@@ -128,7 +128,10 @@ export async function updateInventoryQuantity(sku: string, newQuantity: number):
     const item = await getInventoryItem(sku);
     
     if (!item) {
-      console.warn(`Inventory item ${sku} not found on eBay`);
+      console.warn(`⚠️ SKU ${sku} not found in Inventory API (traditional listing)`);
+      console.warn(`   This listing was created via eBay.com, not programmatically`);
+      console.warn(`   Auto-replenishment is not supported for traditional listings`);
+      console.warn(`   To enable auto-replenishment: recreate listing via admin panel`);
       return false;
     }
 
@@ -145,10 +148,10 @@ export async function updateInventoryQuantity(sku: string, newQuantity: number):
       }
     );
 
-    console.log(`Updated ${sku} quantity to ${newQuantity}`);
+    console.log(`✅ Updated ${sku} quantity to ${newQuantity}`);
     return true;
   } catch (error) {
-    console.error(`Failed to update inventory quantity for ${sku}:`, error);
+    console.error(`❌ Failed to update inventory quantity for ${sku}:`, error);
     return false;
   }
 }

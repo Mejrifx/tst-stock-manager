@@ -52,7 +52,7 @@ export interface Sale {
 
 export interface Activity {
   id: string;
-  type: 'EBAY_SALE_DETECTED' | 'QUANTITY_REPLENISHED' | 'STOCK_ADJUSTED' | 'LISTING_CREATED' | 'LISTING_ENDED' | 'SYNC_SUCCESS' | 'SYNC_ERROR' | 'STATUS_CHANGE' | 'ERROR';
+  type: 'EBAY_SALE_DETECTED' | 'QUANTITY_REPLENISHED' | 'STOCK_ADJUSTED' | 'LISTING_CREATED' | 'LISTING_ENDED' | 'SYNC_SUCCESS' | 'SYNC_ERROR' | 'STATUS_CHANGE' | 'ERROR' | 'WARNING' | 'SALE' | 'REPLENISH' | 'STOCK_ADD' | 'STOCK_REMOVE';
   message: string;
   meta?: Record<string, any>;
   created_at: string;
