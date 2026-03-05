@@ -335,12 +335,6 @@ export default function SettingsPage() {
       </Card>
 
       <TwoFactorAuth />
-
-      <BulkImport />
-
-      <CreateListing />
-
-      <ManualImport />
     </div>
   );
 }
