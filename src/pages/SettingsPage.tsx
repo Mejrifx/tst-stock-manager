@@ -28,7 +28,13 @@ export default function SettingsPage() {
   }, []);
 
   const handleConnect = () => {
-    navigate('/auth/ebay/callback');
+    if (!ebayClient.isConfigured()) {
+      toast.error('eBay credentials not configured. Please check environment variables');
+      return;
+    }
+
+    const authUrl = ebayClient.getAuthUrl();
+    window.location.href = authUrl;
   };
 
   const handleDisconnect = () => {
