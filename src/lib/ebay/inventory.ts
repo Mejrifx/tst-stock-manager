@@ -226,6 +226,8 @@ export interface CreateOfferRequest {
       currency: string;
     };
   };
+  merchantLocationKey?: string; // Optional location identifier
+  storeCategoryNames?: string[];
 }
 
 /**
