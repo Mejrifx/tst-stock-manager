@@ -186,3 +186,87 @@ export async function createInventoryItem(
     return false;
   }
 }
+
+/**
+ * Types for creating inventory items and offers
+ */
+export interface CreateInventoryRequest {
+  sku: string;
+  product: {
+    title: string;
+    description?: string;
+    aspects?: Record<string, string[]>;
+    imageUrls?: string[];
+  };
+  condition: string;
+  availability: {
+    shipToLocationAvailability: {
+      quantity: number;
+    };
+  };
+}
+
+export interface CreateOfferRequest {
+  sku: string;
+  marketplaceId: string;
+  format: 'FIXED_PRICE' | 'AUCTION';
+  availableQuantity: number;
+  categoryId: string;
+  listingPolicies: {
+    paymentPolicyId: string;
+    returnPolicyId: string;
+    fulfillmentPolicyId: string;
+  };
+  pricingSummary: {
+    price: {
+      value: string;
+      currency: string;
+    };
+  };
+}
+
+/**
+ * Create inventory item and publish as offer (listing)
+ */
+export async function createInventoryItemWithOffer(
+  inventoryItem: CreateInventoryRequest,
+  offer: CreateOfferRequest
+): Promise<string> {
+  try {
+    console.log('Creating inventory item:', inventoryItem.sku);
+    
+    // Step 1: Create or update inventory item
+    await ebayClient.put(
+      `/sell/inventory/v1/inventory_item/${encodeURIComponent(inventoryItem.sku)}`,
+      inventoryItem
+    );
+    
+    console.log('✅ Inventory item created');
+    
+    // Step 2: Create offer (publish listing)
+    console.log('Creating offer...');
+    const offerResponse = await ebayClient.post<{ offerId: string; listingId: string }>(
+      '/sell/inventory/v1/offer',
+      offer
+    );
+    
+    const offerId = offerResponse.offerId;
+    console.log('✅ Offer created:', offerId);
+    
+    // Step 3: Publish offer
+    console.log('Publishing offer...');
+    const publishResponse = await ebayClient.post<{ listingId: string }>(
+      `/sell/inventory/v1/offer/${offerId}/publish`,
+      {}
+    );
+    
+    const listingId = publishResponse.listingId;
+    console.log('✅ Listing published:', listingId);
+    
+    return listingId;
+  } catch (error: any) {
+    console.error('Failed to create listing:', error);
+    console.error('Error details:', error.response?.data || error.message);
+    throw new Error(`Failed to create listing: ${error.response?.data?.errors?.[0]?.message || error.message}`);
+  }
+}
