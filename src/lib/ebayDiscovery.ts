@@ -1,18 +1,22 @@
 import { useStore } from '@/store/useStore';
 import { getAllActiveListings } from './ebay/inventory';
-import { ebayClient } from './ebay/client';
+import { getInventoryItem } from './ebay/inventory';
+import * as api from './supabase-api';
 
 /**
  * Discovers eBay listings and automatically links them to SKUs in the database
+ * If a SKU doesn't exist, it creates a new one automatically
  */
 export async function discoverAndLinkEbayListings(): Promise<{
   linked: number;
+  created: number;
   unmatched: number;
   errors: string[];
 }> {
   const store = useStore.getState();
   const results = {
     linked: 0,
+    created: 0,
     unmatched: 0,
     errors: [] as string[],
   };
@@ -29,11 +33,11 @@ export async function discoverAndLinkEbayListings(): Promise<{
     for (const [ebaySku, listingData] of ebayListings) {
       try {
         // Find matching SKU in local database
-        const localSku = store.skus.find((s) => s.sku === ebaySku);
+        let localSku = store.skus.find((s) => s.sku === ebaySku);
 
         if (localSku) {
-          // Update SKU with eBay listing info
-          await store.updateSKU(localSku.id, {
+          // SKU exists - just link it
+          await api.updateSKU(localSku.id, {
             ebay_listing_id: listingData.listingId,
             ebay_listed_quantity: listingData.quantity,
             last_synced_at: new Date().toISOString(),
@@ -42,32 +46,70 @@ export async function discoverAndLinkEbayListings(): Promise<{
           console.log(`✅ Linked ${ebaySku} → eBay listing ${listingData.listingId}`);
           results.linked++;
 
-          // Log activity
           await store.addActivity(
             'LISTING_CREATED',
-            `Auto-linked ${ebaySku} to eBay listing (ID: ${listingData.listingId})`
+            `Linked ${ebaySku} to eBay listing (ID: ${listingData.listingId})`
           );
         } else {
-          console.warn(`⚠️ eBay listing for SKU ${ebaySku} not found in database`);
-          results.unmatched++;
+          // SKU doesn't exist - fetch full details from eBay and create it
+          console.log(`🆕 Creating new SKU for ${ebaySku}...`);
           
+          const ebayItem = await getInventoryItem(ebaySku);
+          
+          if (!ebayItem) {
+            console.error(`Failed to fetch details for ${ebaySku}`);
+            results.errors.push(`Failed to fetch eBay item details for ${ebaySku}`);
+            continue;
+          }
+
+          // Parse SKU components from the code (basic parsing - you can enhance this)
+          const parts = ebaySku.split('-');
+          const model = parts[0] || 'Unknown';
+          const grade = parts[1] || 'A';
+          const storage = parts[2] || '64GB';
+          const colour = parts[3] || 'Black';
+
+          // Create new SKU in database
+          const newSku = await api.createSKU({
+            sku: ebaySku,
+            model,
+            grade,
+            storage,
+            colour,
+            title: ebayItem.product.title,
+            total_stock: listingData.quantity,
+            reserved_stock: 0,
+            available_stock: listingData.quantity,
+            ebay_listing_id: listingData.listingId,
+            ebay_listed_quantity: listingData.quantity,
+            cap_quantity: 3,
+            price: 0, // You'll need to update this manually or fetch from listing
+            last_synced_at: new Date().toISOString(),
+          });
+
+          console.log(`✅ Created new SKU: ${ebaySku} (ID: ${newSku.id})`);
+          results.created++;
+
           await store.addActivity(
-            'ERROR',
-            `eBay listing found for unknown SKU: ${ebaySku}`
+            'LISTING_CREATED',
+            `Auto-created SKU ${ebaySku} from eBay listing (ID: ${listingData.listingId})`
           );
         }
       } catch (error: any) {
-        const errorMsg = `Failed to link ${ebaySku}: ${error.message}`;
+        const errorMsg = `Failed to process ${ebaySku}: ${error.message}`;
         console.error(errorMsg);
         results.errors.push(errorMsg);
       }
     }
 
+    // Reload data to show new/updated SKUs
+    await store.loadData();
+
     // Log summary
-    const summary = `eBay listing discovery: ${results.linked} linked, ${results.unmatched} unmatched, ${results.errors.length} errors`;
+    const summary = `eBay discovery: ${results.linked} linked, ${results.created} created, ${results.unmatched} unmatched, ${results.errors.length} errors`;
     console.log(summary);
     
-    if (results.linked > 0) {
+    if (results.linked > 0 || results.created > 0) {
       await store.addActivity('SYNC_SUCCESS', summary);
     }
 
@@ -100,3 +142,4 @@ export async function updateSKUWithEbayInfo(
     last_synced_at: new Date().toISOString(),
   });
 }
+

@@ -92,10 +92,13 @@ export default function SettingsPage() {
       
       if (results.errors.length > 0) {
         toast.error(`Discovery completed with ${results.errors.length} errors. Check console for details.`);
-      } else if (results.linked === 0 && results.unmatched === 0) {
+      } else if (results.linked === 0 && results.created === 0 && results.unmatched === 0) {
         toast.warning('No eBay listings found');
       } else {
-        toast.success(`Discovered ${results.linked} listings! ${results.unmatched} unmatched SKUs.`);
+        const message = results.created > 0 
+          ? `Discovered ${results.linked} listings and created ${results.created} new SKUs!`
+          : `Discovered ${results.linked} listings!`;
+        toast.success(message);
         
         // Reload data to show updated listings
         await loadData();
@@ -189,7 +192,7 @@ export default function SettingsPage() {
           
           {isConnected && (
             <div className="p-3 bg-info/10 border border-info/30 rounded text-xs text-info">
-              <strong>💡 How it works:</strong> Create listings on eBay with your SKU codes, then click "Discover Listings" to automatically link them to your inventory.
+              <strong>💡 How it works:</strong> Create listings on eBay with SKU codes. Click "Discover Listings" to automatically create/link SKUs in your inventory.
             </div>
           )}
         </CardContent>
