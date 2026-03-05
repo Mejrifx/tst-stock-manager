@@ -6,15 +6,15 @@ import { formatDistanceToNow } from "date-fns";
 export default function Dashboard() {
   const { skus, activities, syncStatus, sales } = useStore();
 
-  const totalStock = skus.reduce((sum, sku) => sum + sku.totalStock, 0);
-  const listedOnEbay = skus.reduce((sum, sku) => sum + sku.ebayListedQuantity, 0);
+  const totalStock = skus.reduce((sum, sku) => sum + sku.total_stock, 0);
+  const listedOnEbay = skus.reduce((sum, sku) => sum + sku.ebay_listed_quantity, 0);
   
   const today = new Date().toDateString();
   const soldToday = sales.filter(
-    (s) => new Date(s.saleDate).toDateString() === today
+    (s) => new Date(s.sale_date).toDateString() === today
   ).reduce((sum, sale) => sum + sale.quantity, 0);
 
-  const lowStockSkus = skus.filter((s) => s.availableStock < 5 && s.ebayListingId);
+  const lowStockSkus = skus.filter((s) => s.available_stock < 5 && s.ebay_listing_id);
 
   const stats = [
     { label: "Total Stock", value: totalStock, icon: Package, color: "text-primary" },
@@ -54,9 +54,9 @@ export default function Dashboard() {
             <RefreshCw className={`h-4 w-4 text-primary ${syncStatus.status === "running" ? "animate-spin" : ""}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold capitalize">{syncStatus.status}</div>
+            <div className="text-lg font-bold capitalize">{syncStatus?.status || 'idle'}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Last: {formatDistanceToNow(new Date(syncStatus.lastRun), { addSuffix: true })}
+              Last: {syncStatus ? formatDistanceToNow(new Date(syncStatus.last_run), { addSuffix: true }) : 'Never'}
             </p>
           </CardContent>
         </Card>
@@ -75,7 +75,7 @@ export default function Dashboard() {
               {lowStockSkus.slice(0, 5).map((sku) => (
                 <div key={sku.id} className="flex items-center justify-between text-sm">
                   <span className="font-mono">{sku.sku}</span>
-                  <span className="text-warning font-semibold">{sku.availableStock} units left</span>
+                  <span className="text-warning font-semibold">{sku.available_stock} units left</span>
                 </div>
               ))}
               {lowStockSkus.length > 5 && (

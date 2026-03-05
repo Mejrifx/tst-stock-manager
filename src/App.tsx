@@ -15,11 +15,17 @@ import EbayAuth from "./pages/EbayAuth";
 import NotFound from "./pages/NotFound";
 import { syncWorker } from "./lib/syncWorker";
 import { ebayClient } from "./lib/ebay/client";
+import { useStore } from "./store/useStore";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  const loadData = useStore((state) => state.loadData);
+
   useEffect(() => {
+    // Load data from Supabase on startup
+    loadData();
+
     // Start sync worker if eBay is connected
     if (ebayClient.isConnected()) {
       syncWorker.start();
@@ -28,7 +34,7 @@ const App = () => {
     return () => {
       syncWorker.stop();
     };
-  }, []);
+  }, [loadData]);
 
   return (
     <QueryClientProvider client={queryClient}>

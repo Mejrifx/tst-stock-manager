@@ -1,176 +1,195 @@
 import { create } from "zustand";
-import { mockData, SKU, Sale, Activity, ActivityType, SyncStatus } from "@/data/mock";
+import type { SKU, Sale, Activity, SyncStatus } from "@/lib/supabase";
+import * as api from "@/lib/supabase-api";
 
 interface Store {
   skus: SKU[];
   sales: Sale[];
   activities: Activity[];
-  syncStatus: SyncStatus;
+  syncStatus: SyncStatus | null;
+  loading: boolean;
   
-  // Actions
-  addStock: (skuId: string, quantity: number) => void;
-  removeStock: (skuId: string, quantity: number, reason: string) => void;
-  updateEbayQuantity: (skuId: string, newQty: number) => void;
-  processSale: (orderId: string, skuId: string, qty: number, buyer: string) => void;
-  replenishEbayListing: (skuId: string) => void;
-  addActivity: (type: ActivityType, message: string, meta?: Record<string, string>) => void;
-  updateSyncStatus: (status: "idle" | "running" | "error") => void;
+  // Data loading
+  loadData: () => Promise<void>;
+  
+  // SKU Actions
+  addStock: (skuId: string, quantity: number) => Promise<void>;
+  removeStock: (skuId: string, quantity: number, reason: string) => Promise<void>;
+  updateEbayQuantity: (skuId: string, newQty: number) => Promise<void>;
+  processSale: (orderId: string, skuId: string, qty: number, buyer: string) => Promise<void>;
+  replenishEbayListing: (skuId: string) => Promise<void>;
+  
+  // Activity Actions
+  addActivity: (type: Activity['type'], message: string, meta?: Record<string, any>) => Promise<void>;
+  
+  // Sync Actions
+  updateSyncStatus: (status: 'idle' | 'running' | 'error', errorMessage?: string) => Promise<void>;
 }
 
 export const useStore = create<Store>((set, get) => ({
-  skus: mockData.skus,
-  sales: mockData.sales,
-  activities: mockData.activities,
-  syncStatus: mockData.syncStatus,
+  skus: [],
+  sales: [],
+  activities: [],
+  syncStatus: null,
+  loading: false,
 
-  addStock: (skuId, quantity) => {
-    set((s) => ({
-      skus: s.skus.map((sku) => {
-        if (sku.id === skuId) {
-          const newTotalStock = sku.totalStock + quantity;
-          const newAvailableStock = newTotalStock - sku.reservedStock;
-          return {
-            ...sku,
-            totalStock: newTotalStock,
-            availableStock: newAvailableStock,
-          };
-        }
-        return sku;
-      }),
-    }));
-    
-    const sku = get().skus.find((s) => s.id === skuId);
-    if (sku) {
-      get().addActivity("STOCK_ADJUSTED", `Stock added: +${quantity} ${sku.sku} (Total: ${sku.totalStock + quantity})`);
+  loadData: async () => {
+    set({ loading: true });
+    try {
+      const [skus, sales, activities, syncStatus] = await Promise.all([
+        api.getAllSKUs(),
+        api.getAllSales(),
+        api.getAllActivities(100),
+        api.getSyncStatus(),
+      ]);
+      
+      set({ skus, sales, activities, syncStatus, loading: false });
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      set({ loading: false });
     }
   },
 
-  removeStock: (skuId, quantity, reason) => {
-    set((s) => ({
-      skus: s.skus.map((sku) => {
-        if (sku.id === skuId) {
-          const newTotalStock = Math.max(0, sku.totalStock - quantity);
-          const newAvailableStock = Math.max(0, newTotalStock - sku.reservedStock);
-          return {
-            ...sku,
-            totalStock: newTotalStock,
-            availableStock: newAvailableStock,
-          };
-        }
-        return sku;
-      }),
-    }));
-    
-    const sku = get().skus.find((s) => s.id === skuId);
-    if (sku) {
-      get().addActivity("STOCK_ADJUSTED", `Stock removed: -${quantity} ${sku.sku} (Reason: ${reason})`);
+  addStock: async (skuId, quantity) => {
+    try {
+      const updatedSKU = await api.addStockToSKU(skuId, quantity);
+      
+      set((s) => ({
+        skus: s.skus.map((sku) => (sku.id === skuId ? updatedSKU : sku)),
+      }));
+
+      await get().addActivity(
+        'STOCK_ADJUSTED',
+        `Stock added: +${quantity} ${updatedSKU.sku} (Total: ${updatedSKU.total_stock})`
+      );
+    } catch (error) {
+      console.error('Failed to add stock:', error);
+      throw error;
     }
   },
 
-  updateEbayQuantity: (skuId, newQty) => {
-    set((s) => ({
-      skus: s.skus.map((sku) => {
-        if (sku.id === skuId) {
-          return {
-            ...sku,
-            ebayListedQuantity: newQty,
-            lastSyncedAt: new Date().toISOString(),
-          };
-        }
-        return sku;
-      }),
-    }));
+  removeStock: async (skuId, quantity, reason) => {
+    try {
+      const updatedSKU = await api.removeStockFromSKU(skuId, quantity);
+      
+      set((s) => ({
+        skus: s.skus.map((sku) => (sku.id === skuId ? updatedSKU : sku)),
+      }));
+
+      await get().addActivity(
+        'STOCK_ADJUSTED',
+        `Stock removed: -${quantity} ${updatedSKU.sku} (Reason: ${reason})`
+      );
+    } catch (error) {
+      console.error('Failed to remove stock:', error);
+      throw error;
+    }
   },
 
-  processSale: (orderId, skuId, qty, buyer) => {
-    const sku = get().skus.find((s) => s.id === skuId);
-    if (!sku) return;
+  updateEbayQuantity: async (skuId, newQty) => {
+    try {
+      const updatedSKU = await api.updateSKU(skuId, {
+        ebay_listed_quantity: newQty,
+        last_synced_at: new Date().toISOString(),
+      });
 
-    // Reduce total stock and eBay quantity
-    set((s) => ({
-      skus: s.skus.map((sk) => {
-        if (sk.id === skuId) {
-          const newTotalStock = Math.max(0, sk.totalStock - qty);
-          const newEbayQty = Math.max(0, sk.ebayListedQuantity - qty);
-          const newAvailableStock = Math.max(0, newTotalStock - sk.reservedStock);
-          return {
-            ...sk,
-            totalStock: newTotalStock,
-            availableStock: newAvailableStock,
-            ebayListedQuantity: newEbayQty,
-            lastSyncedAt: new Date().toISOString(),
-          };
-        }
-        return sk;
-      }),
-    }));
-
-    // Add sale record
-    const sale: Sale = {
-      id: `SALE-${Date.now()}`,
-      orderId,
-      skuId,
-      sku: sku.sku,
-      quantity: qty,
-      buyer,
-      saleDate: new Date().toISOString(),
-      status: "PENDING",
-    };
-
-    set((s) => ({
-      sales: [sale, ...s.sales],
-    }));
-
-    get().addActivity("EBAY_SALE_DETECTED", `Sale detected: ${qty}x ${sku.sku} (Order #${orderId})`);
+      set((s) => ({
+        skus: s.skus.map((sku) => (sku.id === skuId ? updatedSKU : sku)),
+      }));
+    } catch (error) {
+      console.error('Failed to update eBay quantity:', error);
+      throw error;
+    }
   },
 
-  replenishEbayListing: (skuId) => {
-    const sku = get().skus.find((s) => s.id === skuId);
-    if (!sku) return;
+  processSale: async (orderId, skuId, qty, buyer) => {
+    try {
+      const sku = get().skus.find((s) => s.id === skuId);
+      if (!sku) throw new Error('SKU not found');
 
-    const needed = sku.capQuantity - sku.ebayListedQuantity;
-    if (needed <= 0) return;
+      // Update stock quantities
+      const newTotalStock = Math.max(0, sku.total_stock - qty);
+      const newEbayQty = Math.max(0, sku.ebay_listed_quantity - qty);
+      const newAvailableStock = Math.max(0, newTotalStock - sku.reserved_stock);
 
-    const canReplenish = Math.min(needed, sku.availableStock);
-    const newQty = sku.ebayListedQuantity + canReplenish;
+      const updatedSKU = await api.updateSKU(skuId, {
+        total_stock: newTotalStock,
+        available_stock: newAvailableStock,
+        ebay_listed_quantity: newEbayQty,
+        last_synced_at: new Date().toISOString(),
+      });
 
-    set((s) => ({
-      skus: s.skus.map((sk) => {
-        if (sk.id === skuId) {
-          return {
-            ...sk,
-            ebayListedQuantity: newQty,
-            lastSyncedAt: new Date().toISOString(),
-          };
-        }
-        return sk;
-      }),
-    }));
+      // Create sale record
+      const sale = await api.createSale({
+        order_id: orderId,
+        sku_id: skuId,
+        sku: sku.sku,
+        quantity: qty,
+        buyer,
+        sale_date: new Date().toISOString(),
+        status: 'PENDING',
+      });
 
-    get().addActivity(
-      "QUANTITY_REPLENISHED",
-      `eBay quantity replenished: ${sku.sku} (${sku.ebayListedQuantity} → ${newQty})`
-    );
+      set((s) => ({
+        skus: s.skus.map((sk) => (sk.id === skuId ? updatedSKU : sk)),
+        sales: [sale, ...s.sales],
+      }));
+
+      await get().addActivity(
+        'EBAY_SALE_DETECTED',
+        `Sale detected: ${qty}x ${sku.sku} (Order #${orderId})`
+      );
+    } catch (error) {
+      console.error('Failed to process sale:', error);
+      throw error;
+    }
   },
 
-  addActivity: (type, message, meta) => {
-    const activity: Activity = {
-      id: `ACT-${Date.now()}`,
-      ts: new Date().toISOString(),
-      type,
-      message,
-      meta,
-    };
-    set((s) => ({ activities: [activity, ...s.activities] }));
+  replenishEbayListing: async (skuId) => {
+    try {
+      const sku = get().skus.find((s) => s.id === skuId);
+      if (!sku) throw new Error('SKU not found');
+
+      const needed = sku.cap_quantity - sku.ebay_listed_quantity;
+      if (needed <= 0) return;
+
+      const canReplenish = Math.min(needed, sku.available_stock);
+      const newQty = sku.ebay_listed_quantity + canReplenish;
+
+      const updatedSKU = await api.updateSKU(skuId, {
+        ebay_listed_quantity: newQty,
+        last_synced_at: new Date().toISOString(),
+      });
+
+      set((s) => ({
+        skus: s.skus.map((sk) => (sk.id === skuId ? updatedSKU : sk)),
+      }));
+
+      await get().addActivity(
+        'QUANTITY_REPLENISHED',
+        `eBay quantity replenished: ${sku.sku} (${sku.ebay_listed_quantity} → ${newQty})`
+      );
+    } catch (error) {
+      console.error('Failed to replenish eBay listing:', error);
+      throw error;
+    }
   },
 
-  updateSyncStatus: (status) => {
-    set({
-      syncStatus: {
-        lastRun: new Date().toISOString(),
-        status,
-        nextRun: new Date(Date.now() + 300000).toISOString(),
-      },
-    });
+  addActivity: async (type, message, meta) => {
+    try {
+      const activity = await api.createActivity(type, message, meta);
+      set((s) => ({ activities: [activity, ...s.activities] }));
+    } catch (error) {
+      console.error('Failed to add activity:', error);
+    }
+  },
+
+  updateSyncStatus: async (status, errorMessage) => {
+    try {
+      const syncStatus = await api.updateSyncStatus(status, errorMessage);
+      set({ syncStatus });
+    } catch (error) {
+      console.error('Failed to update sync status:', error);
+    }
   },
 }));
