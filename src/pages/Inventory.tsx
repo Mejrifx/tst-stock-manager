@@ -133,20 +133,20 @@ export default function Inventory() {
                 <TableRow key={sku.id} className="hover:bg-muted/30">
                   <TableCell className="font-mono text-xs">{sku.sku}</TableCell>
                   <TableCell className="text-sm max-w-[200px] truncate">{sku.title}</TableCell>
-                  <TableCell className="text-right font-semibold">{sku.totalStock}</TableCell>
+                  <TableCell className="text-right font-semibold">{sku.total_stock}</TableCell>
                   <TableCell className="text-right">
-                    <span className={sku.ebayListedQuantity > 0 ? "text-info font-semibold" : "text-muted-foreground"}>
-                      {sku.ebayListedQuantity}
+                    <span className={sku.ebay_listed_quantity > 0 ? "text-info font-semibold" : "text-muted-foreground"}>
+                      {sku.ebay_listed_quantity}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{sku.availableStock}</TableCell>
-                  <TableCell>{getStockBadge(sku.availableStock)}</TableCell>
+                  <TableCell className="text-right font-semibold">{sku.available_stock}</TableCell>
+                  <TableCell>{getStockBadge(sku.available_stock)}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
-                    {sku.ebayListingId ? sku.ebayListingId.substring(0, 12) + "..." : "—"}
+                    {sku.ebay_listing_id ? sku.ebay_listing_id.substring(0, 12) + "..." : "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">£{sku.price}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {sku.lastSyncedAt ? format(new Date(sku.lastSyncedAt), "dd MMM HH:mm") : "Never"}
+                    {sku.last_synced_at ? format(new Date(sku.last_synced_at), "dd MMM HH:mm") : "Never"}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -170,7 +170,7 @@ export default function Inventory() {
                           <Minus className="h-4 w-4 mr-2" />
                           Remove Stock
                         </DropdownMenuItem>
-                        {sku.ebayListingId && sku.ebayListedQuantity < sku.capQuantity && (
+                        {sku.ebay_listing_id && sku.ebay_listed_quantity < sku.cap_quantity && (
                           <DropdownMenuItem onClick={() => handleReplenish(sku.id, sku.sku)}>
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Replenish to Cap
