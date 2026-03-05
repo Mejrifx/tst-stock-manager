@@ -1,7 +1,29 @@
 import { useStore } from "@/store/useStore";
-import { ActivityBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
+import { ActivityType } from "@/data/mock";
+
+const activityConfig: Record<ActivityType, { className: string }> = {
+  EBAY_SALE_DETECTED: { className: "bg-success/15 text-success border-success/30" },
+  QUANTITY_REPLENISHED: { className: "bg-info/15 text-info border-info/30" },
+  STOCK_ADJUSTED: { className: "bg-primary/15 text-primary border-primary/30" },
+  LISTING_CREATED: { className: "bg-success/15 text-success border-success/30" },
+  LISTING_ENDED: { className: "bg-muted text-muted-foreground border-border" },
+  SYNC_SUCCESS: { className: "bg-success/15 text-success border-success/30" },
+  SYNC_ERROR: { className: "bg-destructive/15 text-destructive border-destructive/30" },
+  STATUS_CHANGE: { className: "bg-primary/15 text-primary border-primary/30" },
+  ERROR: { className: "bg-destructive/15 text-destructive border-destructive/30" },
+};
+
+function ActivityBadge({ type }: { type: ActivityType }) {
+  const config = activityConfig[type];
+  return (
+    <Badge variant="outline" className={config.className}>
+      {type.replace(/_/g, " ")}
+    </Badge>
+  );
+}
 
 export default function ActivityPage() {
   const { activities } = useStore();

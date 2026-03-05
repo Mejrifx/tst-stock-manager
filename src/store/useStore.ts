@@ -1,73 +1,176 @@
 import { create } from "zustand";
-import { mockData, Item, GroupRule, Activity, ItemStatus, ActivityType } from "@/data/mock";
+import { mockData, SKU, Sale, Activity, ActivityType, SyncStatus } from "@/data/mock";
 
 interface Store {
-  items: Item[];
-  groupRules: GroupRule[];
+  skus: SKU[];
+  sales: Sale[];
   activities: Activity[];
-  syncStatus: typeof mockData.syncStatus;
+  syncStatus: SyncStatus;
   
   // Actions
-  updateItemStatus: (itemId: string, status: ItemStatus) => void;
-  updateCapRule: (groupKey: string, cap: number) => void;
-  listNextItems: (groupKey: string) => void;
-  addActivity: (type: ActivityType, message: string) => void;
+  addStock: (skuId: string, quantity: number) => void;
+  removeStock: (skuId: string, quantity: number, reason: string) => void;
+  updateEbayQuantity: (skuId: string, newQty: number) => void;
+  processSale: (orderId: string, skuId: string, qty: number, buyer: string) => void;
+  replenishEbayListing: (skuId: string) => void;
+  addActivity: (type: ActivityType, message: string, meta?: Record<string, string>) => void;
+  updateSyncStatus: (status: "idle" | "running" | "error") => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
-  items: mockData.items,
-  groupRules: mockData.groupRules,
+  skus: mockData.skus,
+  sales: mockData.sales,
   activities: mockData.activities,
   syncStatus: mockData.syncStatus,
 
-  updateItemStatus: (itemId, status) => {
+  addStock: (skuId, quantity) => {
     set((s) => ({
-      items: s.items.map((i) => (i.id === itemId ? { ...i, status, ebayItemId: status === "LISTED" ? `11${String(Math.floor(Math.random() * 9999999999)).padStart(10, "0")}` : status === "IN_STOCK" ? undefined : i.ebayItemId } : i)),
-    }));
-    get().addActivity("STATUS_CHANGE", `Item ${itemId} status changed to ${status}`);
-  },
-
-  updateCapRule: (groupKey, cap) => {
-    set((s) => ({
-      groupRules: s.groupRules.map((r) => (r.groupKey === groupKey ? { ...r, capLiveListings: cap } : r)),
-    }));
-  },
-
-  listNextItems: (groupKey) => {
-    const state = get();
-    const rule = state.groupRules.find((r) => r.groupKey === groupKey);
-    if (!rule) return;
-
-    const groupItems = state.items.filter((i) => i.groupKey === groupKey);
-    const listedCount = groupItems.filter((i) => i.status === "LISTED").length;
-    const needed = Math.max(0, rule.capLiveListings - listedCount);
-
-    if (needed === 0) return;
-
-    const inStock = groupItems.filter((i) => i.status === "IN_STOCK").slice(0, needed);
-
-    set((s) => ({
-      items: s.items.map((i) => {
-        const match = inStock.find((is) => is.id === i.id);
-        if (match) {
-          return { ...i, status: "LISTED" as ItemStatus, ebayItemId: `11${String(Math.floor(Math.random() * 9999999999)).padStart(10, "0")}` };
+      skus: s.skus.map((sku) => {
+        if (sku.id === skuId) {
+          const newTotalStock = sku.totalStock + quantity;
+          const newAvailableStock = newTotalStock - sku.reservedStock;
+          return {
+            ...sku,
+            totalStock: newTotalStock,
+            availableStock: newAvailableStock,
+          };
         }
-        return i;
+        return sku;
+      }),
+    }));
+    
+    const sku = get().skus.find((s) => s.id === skuId);
+    if (sku) {
+      get().addActivity("STOCK_ADJUSTED", `Stock added: +${quantity} ${sku.sku} (Total: ${sku.totalStock + quantity})`);
+    }
+  },
+
+  removeStock: (skuId, quantity, reason) => {
+    set((s) => ({
+      skus: s.skus.map((sku) => {
+        if (sku.id === skuId) {
+          const newTotalStock = Math.max(0, sku.totalStock - quantity);
+          const newAvailableStock = Math.max(0, newTotalStock - sku.reservedStock);
+          return {
+            ...sku,
+            totalStock: newTotalStock,
+            availableStock: newAvailableStock,
+          };
+        }
+        return sku;
+      }),
+    }));
+    
+    const sku = get().skus.find((s) => s.id === skuId);
+    if (sku) {
+      get().addActivity("STOCK_ADJUSTED", `Stock removed: -${quantity} ${sku.sku} (Reason: ${reason})`);
+    }
+  },
+
+  updateEbayQuantity: (skuId, newQty) => {
+    set((s) => ({
+      skus: s.skus.map((sku) => {
+        if (sku.id === skuId) {
+          return {
+            ...sku,
+            ebayListedQuantity: newQty,
+            lastSyncedAt: new Date().toISOString(),
+          };
+        }
+        return sku;
+      }),
+    }));
+  },
+
+  processSale: (orderId, skuId, qty, buyer) => {
+    const sku = get().skus.find((s) => s.id === skuId);
+    if (!sku) return;
+
+    // Reduce total stock and eBay quantity
+    set((s) => ({
+      skus: s.skus.map((sk) => {
+        if (sk.id === skuId) {
+          const newTotalStock = Math.max(0, sk.totalStock - qty);
+          const newEbayQty = Math.max(0, sk.ebayListedQuantity - qty);
+          const newAvailableStock = Math.max(0, newTotalStock - sk.reservedStock);
+          return {
+            ...sk,
+            totalStock: newTotalStock,
+            availableStock: newAvailableStock,
+            ebayListedQuantity: newEbayQty,
+            lastSyncedAt: new Date().toISOString(),
+          };
+        }
+        return sk;
       }),
     }));
 
-    inStock.forEach((item) => {
-      get().addActivity("LISTING_CREATED", `Auto-listed ${item.sku} to fill cap for ${rule.label}`);
-    });
+    // Add sale record
+    const sale: Sale = {
+      id: `SALE-${Date.now()}`,
+      orderId,
+      skuId,
+      sku: sku.sku,
+      quantity: qty,
+      buyer,
+      saleDate: new Date().toISOString(),
+      status: "PENDING",
+    };
+
+    set((s) => ({
+      sales: [sale, ...s.sales],
+    }));
+
+    get().addActivity("EBAY_SALE_DETECTED", `Sale detected: ${qty}x ${sku.sku} (Order #${orderId})`);
   },
 
-  addActivity: (type, message) => {
+  replenishEbayListing: (skuId) => {
+    const sku = get().skus.find((s) => s.id === skuId);
+    if (!sku) return;
+
+    const needed = sku.capQuantity - sku.ebayListedQuantity;
+    if (needed <= 0) return;
+
+    const canReplenish = Math.min(needed, sku.availableStock);
+    const newQty = sku.ebayListedQuantity + canReplenish;
+
+    set((s) => ({
+      skus: s.skus.map((sk) => {
+        if (sk.id === skuId) {
+          return {
+            ...sk,
+            ebayListedQuantity: newQty,
+            lastSyncedAt: new Date().toISOString(),
+          };
+        }
+        return sk;
+      }),
+    }));
+
+    get().addActivity(
+      "QUANTITY_REPLENISHED",
+      `eBay quantity replenished: ${sku.sku} (${sku.ebayListedQuantity} → ${newQty})`
+    );
+  },
+
+  addActivity: (type, message, meta) => {
     const activity: Activity = {
       id: `ACT-${Date.now()}`,
       ts: new Date().toISOString(),
       type,
       message,
+      meta,
     };
     set((s) => ({ activities: [activity, ...s.activities] }));
+  },
+
+  updateSyncStatus: (status) => {
+    set({
+      syncStatus: {
+        lastRun: new Date().toISOString(),
+        status,
+        nextRun: new Date(Date.now() + 300000).toISOString(),
+      },
+    });
   },
 }));

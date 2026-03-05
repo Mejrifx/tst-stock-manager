@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Package,
   Gauge,
+  ShoppingCart,
   Activity,
   Settings,
   Box,
@@ -24,7 +25,8 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "Listing Caps", url: "/caps", icon: Gauge },
+  { title: "eBay Listings", url: "/caps", icon: Gauge },
+  { title: "Sales", url: "/sales", icon: ShoppingCart },
   { title: "Activity", url: "/activity", icon: Activity },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

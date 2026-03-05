@@ -1,42 +1,76 @@
 import { useState } from "react";
 import { useStore } from "@/store/useStore";
-import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Search } from "lucide-react";
-import { ItemStatus } from "@/data/mock";
+import { MoreHorizontal, Search, Plus, Minus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function Inventory() {
-  const { items, updateItemStatus } = useStore();
+  const { skus, addStock, removeStock, replenishEbayListing } = useStore();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [groupFilter, setGroupFilter] = useState<string>("ALL");
+  const [modelFilter, setModelFilter] = useState<string>("ALL");
+  
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [selectedSkuId, setSelectedSkuId] = useState<string>("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [removeReason, setRemoveReason] = useState<string>("");
 
-  const groups = [...new Set(items.map((i) => i.groupKey))];
+  const models = [...new Set(skus.map((s) => s.model))];
 
-  const filtered = items.filter((i) => {
-    if (statusFilter !== "ALL" && i.status !== statusFilter) return false;
-    if (groupFilter !== "ALL" && i.groupKey !== groupFilter) return false;
+  const filtered = skus.filter((sku) => {
+    if (modelFilter !== "ALL" && sku.model !== modelFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
-        i.sku.toLowerCase().includes(q) ||
-        i.title.toLowerCase().includes(q) ||
-        i.model.toLowerCase().includes(q) ||
-        i.colour.toLowerCase().includes(q)
+        sku.sku.toLowerCase().includes(q) ||
+        sku.title.toLowerCase().includes(q) ||
+        sku.model.toLowerCase().includes(q) ||
+        sku.colour.toLowerCase().includes(q)
       );
     }
     return true;
   });
 
-  const handleAction = (id: string, status: ItemStatus, label: string) => {
-    updateItemStatus(id, status);
-    toast.success(`Item ${label}`);
+  const handleAddStock = () => {
+    if (selectedSkuId && quantity > 0) {
+      addStock(selectedSkuId, quantity);
+      toast.success(`Added ${quantity} units to stock`);
+      setAddDialogOpen(false);
+      setQuantity(1);
+    }
+  };
+
+  const handleRemoveStock = () => {
+    if (selectedSkuId && quantity > 0) {
+      removeStock(selectedSkuId, quantity, removeReason || "Manual adjustment");
+      toast.success(`Removed ${quantity} units from stock`);
+      setRemoveDialogOpen(false);
+      setQuantity(1);
+      setRemoveReason("");
+    }
+  };
+
+  const handleReplenish = (skuId: string, skuCode: string) => {
+    replenishEbayListing(skuId);
+    toast.success(`Replenished eBay listing for ${skuCode}`);
+  };
+
+  const getStockBadge = (availableStock: number) => {
+    if (availableStock >= 10) {
+      return <Badge variant="outline" className="bg-success/15 text-success border-success/30">Good Stock</Badge>;
+    } else if (availableStock >= 5) {
+      return <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">Low Stock</Badge>;
+    } else {
+      return <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">Very Low</Badge>;
+    }
   };
 
   return (
@@ -44,7 +78,7 @@ export default function Inventory() {
       <div>
         <h1 className="text-2xl font-semibold">Inventory</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {items.length} items · {filtered.length} shown
+          {skus.length} SKUs · {filtered.length} shown
         </p>
       </div>
 
@@ -58,29 +92,14 @@ export default function Inventory() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
+        <Select value={modelFilter} onValueChange={setModelFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Models" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            <SelectItem value="IN_STOCK">In Stock</SelectItem>
-            <SelectItem value="LISTED">Listed</SelectItem>
-            <SelectItem value="SOLD">Sold</SelectItem>
-            <SelectItem value="DAMAGED">Damaged</SelectItem>
-            <SelectItem value="RETURNED">Returned</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={groupFilter} onValueChange={setGroupFilter}>
-          <SelectTrigger className="w-[250px]">
-            <SelectValue placeholder="Group" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Groups</SelectItem>
-            {groups.map((g) => (
-              <SelectItem key={g} value={g}>
-                {g.split("|").join(" / ")}
-              </SelectItem>
+            <SelectItem value="ALL">All Models</SelectItem>
+            {models.map((m) => (
+              <SelectItem key={m} value={m}>{m}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -92,32 +111,42 @@ export default function Inventory() {
             <TableRow className="bg-muted/50">
               <TableHead className="font-mono text-xs">SKU</TableHead>
               <TableHead className="text-xs">Title</TableHead>
+              <TableHead className="text-xs text-right">Total Stock</TableHead>
+              <TableHead className="text-xs text-right">Listed Qty</TableHead>
+              <TableHead className="text-xs text-right">Available</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs font-mono">eBay ID</TableHead>
               <TableHead className="text-xs text-right">Price</TableHead>
-              <TableHead className="text-xs">Created</TableHead>
+              <TableHead className="text-xs">Last Synced</TableHead>
               <TableHead className="text-xs w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  No items match your filters
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  No SKUs match your filters
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/30">
-                  <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                  <TableCell className="text-sm max-w-[250px] truncate">{item.title}</TableCell>
-                  <TableCell><StatusBadge status={item.status} /></TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {item.ebayItemId ?? "—"}
+              filtered.map((sku) => (
+                <TableRow key={sku.id} className="hover:bg-muted/30">
+                  <TableCell className="font-mono text-xs">{sku.sku}</TableCell>
+                  <TableCell className="text-sm max-w-[200px] truncate">{sku.title}</TableCell>
+                  <TableCell className="text-right font-semibold">{sku.totalStock}</TableCell>
+                  <TableCell className="text-right">
+                    <span className={sku.ebayListedQuantity > 0 ? "text-info font-semibold" : "text-muted-foreground"}>
+                      {sku.ebayListedQuantity}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm">£{item.price}</TableCell>
+                  <TableCell className="text-right font-semibold">{sku.availableStock}</TableCell>
+                  <TableCell>{getStockBadge(sku.availableStock)}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {sku.ebayListingId ? sku.ebayListingId.substring(0, 12) + "..." : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">£{sku.price}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {format(new Date(item.createdAt), "dd MMM yyyy")}
+                    {sku.lastSyncedAt ? format(new Date(sku.lastSyncedAt), "dd MMM HH:mm") : "Never"}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -127,22 +156,26 @@ export default function Inventory() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {item.status === "IN_STOCK" && (
-                          <DropdownMenuItem onClick={() => handleAction(item.id, "LISTED", "listed on eBay")}>
-                            List on eBay
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedSkuId(sku.id);
+                          setAddDialogOpen(true);
+                        }}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Stock
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedSkuId(sku.id);
+                          setRemoveDialogOpen(true);
+                        }}>
+                          <Minus className="h-4 w-4 mr-2" />
+                          Remove Stock
+                        </DropdownMenuItem>
+                        {sku.ebayListingId && sku.ebayListedQuantity < sku.capQuantity && (
+                          <DropdownMenuItem onClick={() => handleReplenish(sku.id, sku.sku)}>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Replenish to Cap
                           </DropdownMenuItem>
                         )}
-                        {item.status === "LISTED" && (
-                          <DropdownMenuItem onClick={() => handleAction(item.id, "IN_STOCK", "unlisted from eBay")}>
-                            Unlist from eBay
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => handleAction(item.id, "DAMAGED", "marked as damaged")}>
-                          Mark Damaged
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction(item.id, "RETURNED", "marked as returned")}>
-                          Mark Returned
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -152,6 +185,69 @@ export default function Inventory() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Stock</DialogTitle>
+            <DialogDescription>
+              Add units to inventory for {skus.find((s) => s.id === selectedSkuId)?.sku}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-quantity">Quantity</Label>
+              <Input
+                id="add-quantity"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddStock}>Add Stock</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Stock</DialogTitle>
+            <DialogDescription>
+              Remove units from inventory for {skus.find((s) => s.id === selectedSkuId)?.sku}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="remove-quantity">Quantity</Label>
+              <Input
+                id="remove-quantity"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Input
+                id="reason"
+                placeholder="e.g., Damaged, Returned, etc."
+                value={removeReason}
+                onChange={(e) => setRemoveReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveStock}>Remove Stock</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
