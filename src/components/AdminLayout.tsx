@@ -1,7 +1,34 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { useLocation } from "react-router-dom";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+
+  // Map routes to page titles
+  const getPageTitle = () => {
+    switch (location.pathname) {
+      case "/":
+        return "Dashboard";
+      case "/inventory":
+        return "Inventory";
+      case "/manual-listings":
+        return "Manual Listings";
+      case "/automatic-listings":
+        return "Automatic Listings";
+      case "/caps":
+        return "eBay Listings";
+      case "/sales":
+        return "Sales";
+      case "/activity":
+        return "Activity";
+      case "/settings":
+        return "Settings";
+      default:
+        return "TST Stock Manager";
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -10,7 +37,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <header className="h-12 flex items-center border-b bg-card px-4 shrink-0">
             <SidebarTrigger className="mr-4" />
             <span className="text-sm text-muted-foreground font-mono">
-              Inventory + eBay Listing Cap Manager
+              {getPageTitle()}
             </span>
           </header>
           <main className="flex-1 overflow-auto p-6">{children}</main>
