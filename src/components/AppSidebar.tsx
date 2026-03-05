@@ -33,6 +33,8 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Inventory", url: "/inventory", icon: Package },
+  { title: "Manual Listings", url: "/manual-listings", icon: FileText },
+  { title: "Automatic Listings", url: "/automatic-listings", icon: Zap },
   { title: "eBay Listings", url: "/caps", icon: Gauge },
   { title: "Sales", url: "/sales", icon: ShoppingCart },
   { title: "Activity", url: "/activity", icon: Activity },
