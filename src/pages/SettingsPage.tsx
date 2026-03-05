@@ -192,17 +192,17 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-medium">Last Sync</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {formatDistanceToNow(new Date(syncStatus.lastRun), { addSuffix: true })}
+                {syncStatus?.last_run ? formatDistanceToNow(new Date(syncStatus.last_run), { addSuffix: true }) : 'Never'}
               </p>
             </div>
             <Button 
               size="sm" 
               variant="outline" 
               onClick={handleManualSync}
-              disabled={!isConnected || syncStatus.status === 'running'}
+              disabled={!isConnected || syncStatus?.status === 'running'}
               className="gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${syncStatus.status === 'running' ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${syncStatus?.status === 'running' ? 'animate-spin' : ''}`} />
               Sync Now
             </Button>
           </div>

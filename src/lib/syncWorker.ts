@@ -73,7 +73,7 @@ export class SyncWorker {
   }
 
   private async syncOrders(store: ReturnType<typeof useStore.getState>) {
-    const lastSyncTime = store.syncStatus.lastRun;
+    const lastSyncTime = store.syncStatus?.last_run || new Date().toISOString();
     
     console.log('Fetching orders since:', lastSyncTime);
     const orders = await getOrdersSince(lastSyncTime);
@@ -99,17 +99,17 @@ export class SyncWorker {
 
   private async replenishListings(store: ReturnType<typeof useStore.getState>) {
     const skusToReplenish = store.skus.filter(
-      (sku) => sku.ebayListingId && sku.ebayListedQuantity < sku.capQuantity && sku.availableStock > 0
+      (sku) => sku.ebay_listing_id && sku.ebay_listed_quantity < sku.cap_quantity && sku.available_stock > 0
     );
 
     console.log(`Found ${skusToReplenish.length} SKUs that need replenishment`);
 
     for (const sku of skusToReplenish) {
-      const needed = sku.capQuantity - sku.ebayListedQuantity;
-      const canReplenish = Math.min(needed, sku.availableStock);
-      const newQuantity = sku.ebayListedQuantity + canReplenish;
+      const needed = sku.cap_quantity - sku.ebay_listed_quantity;
+      const canReplenish = Math.min(needed, sku.available_stock);
+      const newQuantity = sku.ebay_listed_quantity + canReplenish;
 
-      console.log(`Replenishing ${sku.sku}: ${sku.ebayListedQuantity} → ${newQuantity}`);
+      console.log(`Replenishing ${sku.sku}: ${sku.ebay_listed_quantity} → ${newQuantity}`);
 
       try {
         const success = await updateInventoryQuantity(sku.sku, newQuantity);
