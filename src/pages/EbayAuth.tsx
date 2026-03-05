@@ -30,11 +30,14 @@ export default function EbayAuth() {
   }, [searchParams]);
 
   const handleCallback = async (code: string) => {
+    console.log('OAuth callback received with code:', code);
     setLoading(true);
     setStatus('processing');
 
     try {
+      console.log('Attempting to exchange code for token...');
       const refreshToken = await ebayClient.exchangeCodeForToken(code);
+      console.log('Token exchange result:', refreshToken ? 'SUCCESS' : 'FAILED');
       
       if (refreshToken) {
         setStatus('success');
@@ -47,9 +50,11 @@ export default function EbayAuth() {
         throw new Error('Failed to get refresh token');
       }
     } catch (error: any) {
+      console.error('OAuth error details:', error);
+      console.error('Error response:', error.response?.data);
       setStatus('error');
-      setErrorMessage(error.message || 'Failed to connect to eBay');
-      toast.error('Failed to connect to eBay');
+      setErrorMessage(error.response?.data?.error_description || error.message || 'Failed to connect to eBay');
+      toast.error('Failed to connect to eBay: ' + (error.response?.data?.error_description || error.message));
     } finally {
       setLoading(false);
     }
