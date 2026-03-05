@@ -19,7 +19,7 @@ export function CreateListing() {
   const [sku, setSku] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [condition, setCondition] = useState('3000'); // NEW
+  const [condition, setCondition] = useState('USED_EXCELLENT'); // Use text format for Inventory API
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('3');
   const [category, setCategory] = useState('9355'); // Cell Phones & Smartphones
