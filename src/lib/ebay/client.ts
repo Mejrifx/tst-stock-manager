@@ -48,7 +48,7 @@ class EbayClient {
 
     try {
       const response = await axios.post<TokenResponse>(
-        `${getEbayAuthBase(this.config.environment)}/identity/v1/oauth2/token`,
+        `${getEbayApiBase(this.config.environment)}/identity/v1/oauth2/token`,
         new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token: refreshToken,
@@ -116,7 +116,7 @@ class EbayClient {
 
   async exchangeCodeForToken(code: string): Promise<string> {
     const response = await axios.post<TokenResponse & { refresh_token: string }>(
-      `${getEbayAuthBase(this.config.environment)}/identity/v1/oauth2/token`,
+      `${getEbayApiBase(this.config.environment)}/identity/v1/oauth2/token`,
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
