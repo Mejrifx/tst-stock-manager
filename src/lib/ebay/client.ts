@@ -1,5 +1,5 @@
-import axios, { AxiosInstance } from 'axios';
-import { getEbayConfig, getEbayApiBase, getEbayAuthBase } from './config';
+import axios from 'axios';
+import { getEbayConfig, getEbayAuthBase } from './config';
 
 interface TokenResponse {
   access_token: string;
@@ -11,26 +11,6 @@ class EbayClient {
   private config = getEbayConfig();
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
-  private api: AxiosInstance;
-
-  constructor() {
-    this.api = axios.create({
-      baseURL: getEbayApiBase(this.config.environment),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    });
-
-    // Add request interceptor to inject auth token
-    this.api.interceptors.request.use(async (config) => {
-      const token = await this.getAccessToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-  }
 
   async getAccessToken(): Promise<string | null> {
     // Check if current token is still valid
@@ -62,29 +42,38 @@ class EbayClient {
     }
   }
 
-  async request<T>(method: string, path: string, data?: any): Promise<T> {
-    const response = await this.api.request<T>({
+  async request<T>(method: string, endpoint: string, body?: any): Promise<T> {
+    const accessToken = await this.getAccessToken();
+    
+    if (!accessToken) {
+      throw new Error('No eBay access token available');
+    }
+
+    // Use Netlify Function proxy to avoid CORS
+    const response = await axios.post('/.netlify/functions/ebay-api-proxy', {
+      accessToken,
       method,
-      url: path,
-      data,
+      endpoint,
+      body,
     });
+    
     return response.data;
   }
 
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path);
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>('GET', endpoint);
   }
 
-  async post<T>(path: string, data?: any): Promise<T> {
-    return this.request<T>('POST', path, data);
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>('POST', endpoint, data);
   }
 
-  async put<T>(path: string, data?: any): Promise<T> {
-    return this.request<T>('PUT', path, data);
+  async put<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>('PUT', endpoint, data);
   }
 
-  async delete<T>(path: string): Promise<T> {
-    return this.request<T>('DELETE', path);
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>('DELETE', endpoint);
   }
 
   getAuthUrl(state?: string): string {
