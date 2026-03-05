@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { RefreshCw, LogOut, LogIn, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { TwoFactorAuth } from "@/components/TwoFactorAuth";
+import { ManualImport } from "@/components/ManualImport";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -333,6 +334,8 @@ export default function SettingsPage() {
       </Card>
 
       <TwoFactorAuth />
+
+      <ManualImport />
     </div>
   );
 }
